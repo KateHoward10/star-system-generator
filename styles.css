@@ -245,7 +245,7 @@ pre {
 }
 
 .planet-card svg {
-  min-width: 2400px;
+  min-width: 1500px;
 }
 
 .planet-card-header {
@@ -327,15 +327,6 @@ pre {
 }
 
 
-.system-projection-svg .svg-label {
-  font-size: 18px;
-}
-
-.system-projection-svg .svg-muted {
-  font-size: 15px;
-}
-
-
 .system-projection-svg text,
 .planet-card svg text {
   paint-order: stroke;
@@ -352,4 +343,330 @@ pre {
 .system-projection-svg .svg-muted,
 .planet-card svg .svg-muted {
   font-weight: 500;
+}
+
+
+.orbital-system-surface,
+.planet-orbital-surface {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.orbital-system-svg,
+.planet-orbital-svg {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  height: auto;
+}
+
+
+
+
+#systemVisual {
+  overflow-x: visible;
+  overflow-y: visible;
+}
+
+#systemVisual .orbital-system-surface {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  width: 100%;
+}
+
+#systemVisual .orbital-system-svg {
+  display: block;
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+
+
+
+#systemVisual {
+  overflow-x: visible;
+  overflow-y: visible;
+}
+
+#systemVisual .system-projection-svg {
+  width: max-content;
+  max-width: none;
+}
+
+#systemVisual .orbital-system-surface {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  width: 100%;
+}
+
+#systemVisual .orbital-system-svg {
+  display: block;
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+.system-projection-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.linear-system-surface {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+}
+
+.linear-system-surface .system-projection-svg {
+  width: max-content;
+  max-width: none;
+  min-width: 3600px;
+}
+
+.orbital-system-panel {
+  overflow: hidden;
+  width: 100%;
+}
+
+.orbital-system-panel .orbital-system-surface {
+  overflow: hidden;
+  width: 100%;
+}
+
+.orbital-system-panel .orbital-system-svg {
+  display: block;
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  height: auto;
+}
+
+
+.orbital-system-panel,
+.orbital-system-surface {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: hidden;
+}
+
+.orbital-system-svg {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto;
+  display: block;
+}
+
+
+.orbital-system-svg {
+  aspect-ratio: 2 / 1;
+}
+
+.orbital-system-panel .visual-subsection {
+  margin: 0;
+}
+
+
+#systemVisual {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+.system-projection-stack {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  overflow: visible;
+}
+
+.linear-system-panel {
+  width: 100%;
+  overflow: visible;
+}
+
+.linear-system-surface {
+  width: 100%;
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  border-radius: 14px;
+}
+
+.linear-system-surface .system-projection-svg {
+  width: max-content !important;
+  min-width: 3600px !important;
+  max-width: none !important;
+  display: block;
+}
+
+.orbital-system-panel {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: hidden;
+}
+
+.orbital-system-panel .orbital-system-surface {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: hidden;
+}
+
+.orbital-system-panel .orbital-system-svg {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  display: block;
+  height: auto;
+}
+
+
+/* Strict split between system projection scroll behaviours */
+#systemVisual.visual-surface,
+#systemVisual {
+  overflow: visible !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.system-projection-stack {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.linear-system-panel,
+.orbital-system-panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  box-sizing: border-box;
+}
+
+.linear-system-surface {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+.linear-system-surface .system-projection-svg {
+  display: block !important;
+  width: max-content !important;
+  min-width: 3600px !important;
+  max-width: none !important;
+  height: auto !important;
+}
+
+.orbital-system-panel,
+.orbital-system-surface {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.orbital-system-surface .orbital-system-svg,
+.orbital-system-panel .orbital-system-svg {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+
+.linear-system-surface .system-projection-svg {
+  min-width: 5200px !important;
+}
+
+
+/* Slightly larger projection text, still with halo for contrast */
+.system-projection-svg .svg-label,
+.orbital-system-svg .svg-label,
+.planet-orbital-svg .svg-label,
+.planet-card svg .svg-label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.system-projection-svg .svg-muted,
+.orbital-system-svg .svg-muted,
+.planet-orbital-svg .svg-muted,
+.planet-card svg .svg-muted {
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.system-projection-svg text,
+.orbital-system-svg text,
+.planet-orbital-svg text,
+.planet-card svg text {
+  paint-order: stroke;
+  stroke: #090b11;
+  stroke-width: 4.5px;
+  stroke-linejoin: round;
+}
+
+.linear-system-surface .system-projection-svg {
+  min-width: 7200px !important;
+}
+
+
+.planet-orbital-svg .moon-label.svg-label {
+  font-size: 13px;
+}
+.planet-orbital-svg .moon-label.svg-muted {
+  font-size: 12px;
+}
+
+
+/* Projection readability pass: match page text scale */
+.system-projection-svg .svg-label,
+.orbital-system-svg .svg-label,
+.planet-orbital-svg .svg-label,
+.planet-card svg .svg-label {
+  font-size: 16px !important;
+  font-weight: 700;
+}
+
+.system-projection-svg .svg-muted,
+.orbital-system-svg .svg-muted,
+.planet-orbital-svg .svg-muted,
+.planet-card svg .svg-muted {
+  font-size: 16px !important;
+  font-weight: 550;
+}
+
+.system-projection-svg text,
+.orbital-system-svg text,
+.planet-orbital-svg text,
+.planet-card svg text {
+  paint-order: stroke;
+  stroke: #090b11;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.planet-orbital-svg .moon-label.svg-label {
+  font-size: 15px !important;
+}
+
+.planet-orbital-svg .moon-label.svg-muted {
+  font-size: 14px !important;
+}
+
+.linear-system-surface .system-projection-svg {
+  min-width: 9000px !important;
 }

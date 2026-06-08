@@ -648,130 +648,6 @@ function forceOutpostWorld(rng, planets, system, criteria) {
   p.composition = enrichComposition(compositionForType(p.type), forcedResource, p.type);
   planets.push(p);
 }
-
-function stationEconomicReasonsForPlanet(planet, system) {
-  const reasons = [];
-
-  if (isSuitableForColonisation(planet, system)) reasons.push("colonisation support");
-  if (isSuitableForOutpost(planet, system)) reasons.push("resource extraction outpost");
-  if (isStrongBiosphere(planet)) reasons.push("biosphere research and protection");
-  if (planet.rings && planet.type.includes("giant")) reasons.push("ring mining and fuel logistics");
-
-  const composition = String(planet.composition || "").toLowerCase();
-  if (composition.includes("helium-3")) reasons.push("helium-3 fuel harvesting");
-  if (composition.includes("radiogenic") || composition.includes("uranium") || composition.includes("thorium")) reasons.push("radiogenic heavy-element extraction");
-  if (composition.includes("noble") || composition.includes("gold")) reasons.push("noble-metal extraction");
-  if (composition.includes("metal") || composition.includes("iron")) reasons.push("metal refining");
-  if (composition.includes("volatile") || composition.includes("ice") || composition.includes("water")) reasons.push("volatile harvesting");
-
-  return [...new Set(reasons)];
-}
-
-function stationEconomicReasonsForBelt(belt, system) {
-  const reasons = [];
-  const c = String(belt.composition || "").toLowerCase();
-
-  if (c.includes("metal") || c.includes("iron")) reasons.push("asteroid mining and metal refining");
-  if (c.includes("carbon")) reasons.push("carbonaceous materials and organics");
-  if (c.includes("volatile") || c.includes("ice") || c.includes("water")) reasons.push("water, propellant and volatile harvesting");
-  if (c.includes("uranium") || c.includes("thorium") || c.includes("radiogenic")) reasons.push("radiogenic heavy-element extraction");
-  if (c.includes("gold") || c.includes("noble")) reasons.push("noble-metal extraction");
-  if (system.richElement && system.richElement !== "none") reasons.push(`${richElementLabel(system.richElement)} exploitation`);
-
-  return [...new Set(reasons)];
-}
-
-function stationEconomicReasonsForStargate(system) {
-  return ["stargate traffic control", "customs", "ship servicing", "cargo transfer", "courier-data exchange"];
-}
-
-function stationTypeForReasons(rng, reasons, anchorType) {
-  const joined = reasons.join(" ").toLowerCase();
-
-  if (anchorType === "stargate") return pick(rng, ["Gate traffic station", "Courier-data exchange hub", "Transit habitat"]);
-  if (joined.includes("colonisation")) return pick(rng, ["Orbital colony hub", "Highport habitat", "Civilian transfer station"]);
-  if (joined.includes("biosphere")) return pick(rng, ["Biosecurity research station", "Protected-world observation habitat", "Exobiology platform"]);
-  if (joined.includes("helium") || joined.includes("fuel")) return pick(rng, ["Fuel-harvesting refinery", "Gas-giant skimming platform", "Propellant depot"]);
-  if (joined.includes("mining") || joined.includes("metal") || joined.includes("extraction") || joined.includes("refining")) return pick(rng, ["Industrial mining station", "Ore refinery habitat", "Resource-processing platform"]);
-  if (joined.includes("volatile") || joined.includes("water") || joined.includes("propellant")) return pick(rng, ["Volatile-harvesting station", "Ice refinery habitat", "Propellant depot"]);
-
-  return pick(rng, ["Commercial orbital habitat", "Logistics station", "Industrial freeport"]);
-}
-
-function createStation(rng, anchor, system, index) {
-  const anchorType = anchor.anchorType;
-  const reasons = anchorType === "planet"
-    ? stationEconomicReasonsForPlanet(anchor.body, system)
-    : anchorType === "belt"
-      ? stationEconomicReasonsForBelt(anchor.body, system)
-      : stationEconomicReasonsForStargate(system);
-
-  if (!reasons.length) return null;
-
-  const orbitOffset = anchorType === "planet"
-    ? between(rng, -0.004, 0.004, 5)
-    : anchorType === "belt"
-      ? between(rng, -0.03, 0.03, 4)
-      : 0;
-
-  return {
-    hidden: false,
-    name: `${anchorType === "stargate" ? "GATE" : anchor.body.name ? anchor.body.name : anchor.body.type.toUpperCase()}-${index}-STATION`,
-    type: stationTypeForReasons(rng, reasons, anchorType),
-    anchorType,
-    anchorName: anchorType === "stargate" ? "Stargate" : (anchor.body.name || anchor.body.type),
-    orbitAU: Number((anchor.orbitAU + orbitOffset).toFixed(5)),
-    reasons,
-    populationClass: pick(rng, ["small crewed station", "medium habitat", "large orbital habitat", "industrial platform"]),
-    profitability: pick(rng, ["marginal but justified", "profitable", "high-value", "strategically essential"])
-  };
-}
-
-function generateStations(rng, system, criteria) {
-  if (criteria.allowStations === false) return [];
-
-  const anchors = [];
-
-  system.planets.forEach(p => {
-    const reasons = stationEconomicReasonsForPlanet(p, system);
-    if (reasons.length) anchors.push({ anchorType: "planet", body: p, orbitAU: p.orbitAU, score: reasons.length });
-  });
-
-  system.belts.forEach(b => {
-    const reasons = stationEconomicReasonsForBelt(b, system);
-    if (reasons.length) anchors.push({ anchorType: "belt", body: b, orbitAU: b.orbitAU, score: reasons.length + 1 });
-  });
-
-  if (system.stargateAU) {
-    anchors.push({ anchorType: "stargate", body: null, orbitAU: system.stargateAU, score: 4 });
-  }
-
-  anchors.sort((a, b) => b.score - a.score);
-
-  const maxStations = clamp(Math.ceil(anchors.length * 0.55), 1, 8);
-  const stations = [];
-  anchors.slice(0, maxStations).forEach((anchor, i) => {
-    const station = createStation(rng, anchor, system, i + 1);
-    if (station) stations.push(station);
-  });
-
-  return stations;
-}
-
-function stationTooltip(s) {
-  return `${s.name}
-Type: ${s.type}
-Anchor: ${s.anchorName}
-Orbit: ${s.orbitAU} AU
-Scale: ${s.populationClass}
-Profitability: ${s.profitability}
-Economic reason: ${s.reasons.join(", ")}`;
-}
-
-function stationSummary(s) {
-  return `${s.name}: ${s.type} at ${s.orbitAU} AU, anchored to ${s.anchorName}. Economic reason: ${s.reasons.join(", ")}. Profitability: ${s.profitability}.`;
-}
-
 function generateSystem(criteria) {
   const seedText = criteria.seed || String(Date.now());
   const rng = rngFromSeed(hashSeed(seedText));
@@ -854,8 +730,6 @@ function generateSystem(criteria) {
   }
 
   const gateDistanceAU = stargateDistanceAU({ ...stellar, planets, belts });
-  const stationSystemPreview = { ...stellar, planets, belts, stargateAU: gateDistanceAU, richElement: criteria.richElement };
-  const stations = generateStations(rng, stationSystemPreview, criteria);
 
   return {
     seed: seedText,
@@ -871,8 +745,7 @@ function generateSystem(criteria) {
     zoneOfControlRadiusKm: ZONE_OF_CONTROL_KM,
     zoneOfControlRadiusAU: Number(ZONE_OF_CONTROL_AU.toFixed(6)),
     planets: planets.sort((a, b) => a.orbitAU - b.orbitAU),
-    belts,
-    stations
+    belts
   };
 }
 
@@ -960,14 +833,6 @@ Planetary sovereign volume: ${system.zoneOfControlRadiusKm.toLocaleString()} km 
     });
   });
 
-  const visibleStations = (system.stations || []).filter(s => !s.hidden);
-  if (visibleStations.length) {
-    out += `\nSTATIONS / ORBITAL HABITATS\n`;
-    visibleStations.forEach(s => {
-      out += `- ${s.name}: ${s.type}; orbit ${s.orbitAU} AU; anchor ${s.anchorName}; ${s.populationClass}; ${s.profitability}; reason: ${s.reasons.join(", ")}\n`;
-    });
-  }
-
   const visibleBelts = system.belts.filter(b => !b.hidden);
   if (visibleBelts.length) {
     out += `\nBELTS / SMALL BODY REGIONS\n`;
@@ -1000,8 +865,7 @@ function readCriteria() {
     requireOutpost: document.getElementById("requireOutpost").checked,
     allowTidallyLockedLife: document.getElementById("allowTidallyLockedLife").checked,
     showStargate: document.getElementById("showStargate")?.checked ?? true,
-    showZonesOfControl: document.getElementById("showZonesOfControl")?.checked ?? true,
-    allowStations: document.getElementById("allowStations")?.checked ?? true
+    showZonesOfControl: document.getElementById("showZonesOfControl")?.checked ?? true
   };
 }
 
@@ -1054,34 +918,6 @@ function renderActions() {
     render();
   }));
 
-
-  (lastSystem.stations || []).forEach((station, index) => {
-    addButton(`${station.hidden ? "Show" : "Hide"} ${station.name}`, () => {
-      station.hidden = !station.hidden;
-      updateMutableSeed(`${station.hidden ? "hide" : "show"}-${station.name}`);
-      render();
-    });
-
-    addButton(`Regenerate ${station.name}`, () => {
-      const rng = systemRng(`station-${index}`);
-      const anchor =
-        station.anchorType === "planet"
-          ? { anchorType: "planet", body: lastSystem.planets.find(p => p.name === station.anchorName), orbitAU: station.orbitAU }
-          : station.anchorType === "belt"
-            ? { anchorType: "belt", body: lastSystem.belts.find(b => b.type === station.anchorName) || lastSystem.belts[0], orbitAU: station.orbitAU }
-            : { anchorType: "stargate", body: null, orbitAU: lastSystem.stargateAU };
-
-      const regenerated = createStation(rng, anchor, lastSystem, index + 1);
-      if (regenerated) {
-        regenerated.name = station.name;
-        regenerated.hidden = station.hidden;
-        lastSystem.stations[index] = regenerated;
-        updateMutableSeed(`regen-station-${station.name}`);
-        render();
-      }
-    });
-  });
-
   lastSystem.belts.forEach((belt, index) => {
     actions.appendChild(makeSmallButton(`${belt.hidden ? "Show" : "Hide"} ${belt.type}`, () => {
       belt.hidden = !belt.hidden;
@@ -1109,7 +945,7 @@ document.getElementById("copyBtn").addEventListener("click", async () => {
 });
 
 
-["showStargate", "showZonesOfControl", "allowStations"].forEach(id => {
+["showZonesOfControl"].forEach(id => {
   document.addEventListener("change", event => {
     if (event.target && event.target.id === id && lastSystem) {
       lastCriteria = { ...lastCriteria, [id]: event.target.checked };
@@ -1291,20 +1127,18 @@ function stargateDistanceAU(system) {
 
 function displayOptions() {
   return {
-    stargate: document.getElementById("showStargate")?.checked ?? true,
-    zones: document.getElementById("showZonesOfControl")?.checked ?? true,
-    stations: document.getElementById("allowStations")?.checked ?? true
+    stargate: true,
+    zones: document.getElementById("showZonesOfControl")?.checked ?? true
   };
 }
 
 function systemProjectionWidth(maxOrbit, bodyCount, expansion = null) {
-  // Keep the canvas wide enough to scroll, but not so huge that content becomes tiny.
-  const pxPerAU = maxOrbit <= 5 ? 680 : maxOrbit <= 20 ? 360 : maxOrbit <= 80 ? 150 : 75;
-  let width = Math.max(3400, 320 + maxOrbit * pxPerAU, bodyCount * 440);
+  // Very wide scrollable canvas for page-size labels and larger body icons.
+  const pxPerAU = maxOrbit <= 5 ? 1700 : maxOrbit <= 20 ? 980 : maxOrbit <= 80 ? 450 : 220;
+  let width = Math.max(9000, 700 + maxOrbit * pxPerAU, bodyCount * 1050);
 
   if (expansion?.enabled) {
-    // Add real space for the crowded inner scale, but keep the total size controlled.
-    const extra = Math.min(2200, Math.max(900, expansion.expandUntilAU * 1250));
+    const extra = Math.min(7000, Math.max(3200, expansion.expandUntilAU * 3400));
     width += extra;
   }
 
@@ -1322,8 +1156,8 @@ function scaledSystemX(au, maxOrbit, left, usableWidth) {
 
 function visibleSystemRadius(p) {
   return p.type.includes("giant")
-    ? clamp(16 + p.radiusEarth * 1.35, 26, 46)
-    : clamp(11 + p.radiusEarth * 5.6, 16, 30);
+    ? clamp(30 + p.radiusEarth * 2.25, 42, 84)
+    : clamp(22 + p.radiusEarth * 9.2, 30, 56);
 }
 
 
@@ -1333,6 +1167,7 @@ function visibleMoonsForPlanet(p) {
 
 
 function isInHabitableZone(p, system) {
+  if (!hasStableHabitableZone(system)) return false;
   return p.orbitAU >= system.habitableZoneAU.inner && p.orbitAU <= system.habitableZoneAU.outer;
 }
 
@@ -1563,11 +1398,6 @@ function systemSummaryText(system) {
     parts.push(`Economic notes: ${economicNotes.slice(0, 4).join("; ")}.`);
   }
 
-  const visibleStations = (system.stations || []).filter(s => !s.hidden);
-  if (visibleStations.length) {
-    parts.push(`Stations and habitats: ${visibleStations.map(s => `${s.name} (${s.type}, ${s.anchorName})`).join("; ")}.`);
-  }
-
   const habitableForSettlement = visiblePlanets.filter(p => isSuitableForHabitation(p, system));
   if (habitableForSettlement.length) {
     parts.push(`Habitation: ${habitableForSettlement.map(p => p.name).join(", ")} ${habitableForSettlement.length === 1 ? "is" : "are"} suitable for colonisation.`);
@@ -1742,7 +1572,26 @@ function renderVisuals() {
     planetTarget.textContent = 'Generate a system to draw planet views.';
     return;
   }
-  systemTarget.innerHTML = renderSystemSvg(lastSystem);
+
+  const linearProjection = renderSystemSvg(lastSystem);
+  const orbitalProjection = renderOrbitalSystemProjection(lastSystem);
+
+  systemTarget.innerHTML = `
+    <div class="system-projection-stack">
+      <section class="visual-subsection linear-system-panel">
+        <h3>Linear system projection</h3>
+        <p class="hint">Scrollable AU-bar view. Only this projection has a horizontal scrollbar.</p>
+        <div class="linear-system-surface">
+          ${linearProjection}
+        </div>
+      </section>
+
+      <section class="visual-subsection orbital-system-panel">
+        ${orbitalProjection}
+      </section>
+    </div>
+  `;
+
   const planetSections = renderPlanetSvgs(lastSystem);
   planetTarget.innerHTML = '';
   if (typeof planetSections === 'string') planetTarget.innerHTML = planetSections;
@@ -1759,22 +1608,25 @@ function detectDenseInnerCluster(planets, belts, gateAU) {
   if (bodies.length < 3) return null;
 
   const sorted = bodies.sort((a, b) => a.orbitAU - b.orbitAU);
-  const innerLimit = Math.min(2.0, Math.max(0.6, sorted[Math.min(sorted.length - 1, 4)].orbitAU * 1.2));
+  const innerLimit = Math.min(2.5, Math.max(0.75, sorted[Math.min(sorted.length - 1, 4)].orbitAU * 1.3));
   const innerBodies = sorted.filter(b => b.orbitAU <= innerLimit);
 
   if (innerBodies.length < 3) return null;
 
   let closePairs = 0;
   for (let i = 1; i < innerBodies.length; i++) {
-    if ((innerBodies[i].orbitAU - innerBodies[i - 1].orbitAU) < 0.22) closePairs++;
+    if ((innerBodies[i].orbitAU - innerBodies[i - 1].orbitAU) < 0.3) closePairs++;
   }
 
-  if (closePairs < 2) return null;
+  if (closePairs < 1 && innerBodies.length < 4) return null;
 
   return {
     enabled: true,
-    expandUntilAU: Number(Math.min(Math.max(innerLimit, innerBodies[innerBodies.length - 1].orbitAU + 0.2), Math.max(1.4, gateAU * 0.25)).toFixed(2)),
-    factor: 4.0
+    expandUntilAU: Number(Math.min(
+      Math.max(innerLimit, innerBodies[innerBodies.length - 1].orbitAU + 0.25),
+      Math.max(1.6, gateAU * 0.25)
+    ).toFixed(2)),
+    factor: 4.25
   };
 }
 
@@ -1783,10 +1635,7 @@ function expandedSystemX(au, maxOrbit, left, right, width, expansion) {
   if (!expansion?.enabled) return left + au * usable / maxOrbit;
 
   const e = expansion.expandUntilAU;
-
-  // Allocate a fixed large share of the canvas to the crowded inner region.
-  // Outer distances remain ordered and labelled correctly, but get less visual priority.
-  const innerShare = maxOrbit <= e ? 1 : 0.52;
+  const innerShare = maxOrbit <= e ? 1 : 0.58;
   const innerWidth = usable * innerShare;
   const outerWidth = usable - innerWidth;
 
@@ -1819,9 +1668,9 @@ function expandedTickValues(maxOrbit, expansion) {
 }
 
 function assignProjectionRows(items, xForAU, minGapPx = 92) {
-  // All system bodies are placed above the AU axis.
-  // Rows are staggered upward to avoid icon/label collisions while x-position remains true to AU scale.
-  const rows = [-54, -96, -138, -180, -222, -264];
+  // All bodies in the main system projection are arranged above the AU axis.
+  // Large row spacing prevents page-size labels and body icons overlapping.
+  const rows = [-96, -170, -244, -318, -392, -466];
   const placed = [];
 
   return items.map((item, index) => {
@@ -1842,157 +1691,299 @@ function assignProjectionRows(items, xForAU, minGapPx = 92) {
 }
 
 
-function renderStationSections(system) {
-  const opts = displayOptions();
-  const stations = opts.stations ? (system.stations || []).filter(s => !s.hidden) : [];
-  if (!stations.length) return "";
-  let html = `<div class="planet-card"><div class="planet-card-header">`;
-  html += `<div class="planet-card-title">Stations / orbital habitats</div>`;
-  stations.forEach(s => {
-    html += `<div class="moon-summary" ${tooltipAttrs(stationTooltip(s))}>${paragraphsHtml([stationSummary(s)])}</div>`;
+function projectSystemLabelPositions(projectedPlanets) {
+  const minXGap = 260;
+  const labelLevels = [-20, -52, -84, -116, -148, -180, -212, -244];
+  const placed = [];
+
+  return projectedPlanets.map(({ item, x, row }, index) => {
+    const r = visibleSystemRadius(item);
+    const baseY = Math.max(105, 520 + row - r - 16);
+    let level = 0;
+
+    for (let candidate = 0; candidate < labelLevels.length; candidate++) {
+      const y = baseY + labelLevels[candidate];
+      const conflict = placed.some(p => Math.abs(p.x - x) < minXGap && Math.abs(p.y - y) < 44);
+      if (!conflict) {
+        level = candidate;
+        break;
+      }
+    }
+
+    const y = baseY + labelLevels[level];
+    placed.push({ x, y });
+    return { item, x, row, labelX: x - Math.max(48, r + 18), nameY: y, orbitY: y + 23 };
   });
-  html += `</div></div>`;
-  return html;
+}
+
+
+function orbitalSystemRadiusAU(system) {
+  const visiblePlanets = system.planets.filter(p => !p.hidden);
+  const visibleBelts = system.belts.filter(b => !b.hidden);
+  return Math.max(
+    system.habitableZoneAU.outer * 1.15,
+    ...visiblePlanets.map(p => p.orbitAU),
+    ...visibleBelts.map(b => b.orbitAU),
+    1
+  );
+}
+
+function orbitalProjectionScaleAU(au, maxAU, maxPx) {
+  // Square-root radial scale keeps inner orbits visible while preserving outer ordering.
+  return Math.sqrt(Math.max(au, 0) / Math.max(maxAU, 0.0001)) * maxPx;
+}
+
+
+function expandedOrbitalRadiusAU(au, maxAU, maxPx, expansion) {
+  if (!expansion?.enabled) {
+    return orbitalProjectionScaleAU(au, maxAU, maxPx);
+  }
+
+  const e = expansion.expandUntilAU;
+  const innerShare = maxAU <= e ? 1 : 0.62;
+  const innerPx = maxPx * innerShare;
+  const outerPx = maxPx - innerPx;
+
+  if (au <= e || maxAU <= e) {
+    return Math.sqrt(Math.max(au, 0) / Math.max(e, 0.0001)) * innerPx;
+  }
+
+  return innerPx + Math.sqrt((au - e) / Math.max(maxAU - e, 0.0001)) * outerPx;
+}
+
+function renderOrbitalSystemProjection(system) {
+  const visiblePlanets = system.planets.filter(p => !p.hidden);
+  const visibleBelts = system.belts.filter(b => !b.hidden);
+
+  const width = 1500, height = 760, cx = 750, cy = 400;
+  const maxAU = orbitalSystemRadiusAU(system);
+  const expansion = detectDenseInnerCluster(visiblePlanets, visibleBelts, system.stargateAU || stargateDistanceAU(system));
+  const maxR = 310;
+  const hzInnerR = expandedOrbitalRadiusAU(system.habitableZoneAU.inner, maxAU, maxR, expansion);
+  const hzOuterR = expandedOrbitalRadiusAU(system.habitableZoneAU.outer, maxAU, maxR, expansion);
+  const frostR = expandedOrbitalRadiusAU(system.frostLineAU, maxAU, maxR, expansion);
+
+  let svg = `<h3>Orbital system projection</h3><p class="hint">Top-down symbolic orbit view. Same display size as planet orbital projections; stargate omitted.</p>`;
+  svg += `<div class="orbital-system-surface">`;
+  svg += `<svg class="orbital-system-svg planet-orbital-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Top-down orbital system projection">`;
+  svg += `<rect x="0" y="0" width="${width}" height="${height}" fill="#090b11"/>`;
+  svg += `<text x="20" y="30" class="svg-label">Orbital system projection</text>`;
+  svg += `<text x="20" y="52" class="svg-muted">Circular layout; orbital angles are illustrative, not generated ephemerides.</text>`;
+  if (expansion?.enabled) {
+    svg += `<text x="20" y="74" class="svg-muted">Expanded orbital scale active: 0–${expansion.expandUntilAU} AU is given extra radial space for dense inner bodies.</text>`;
+  }
+
+  if (expansion?.enabled) {
+    const expandedBoundaryR = expandedOrbitalRadiusAU(expansion.expandUntilAU, maxAU, maxR, expansion);
+    svg += `<circle cx="${cx}" cy="${cy}" r="${expandedBoundaryR}" fill="none" stroke="#89b4ff" stroke-width="2" stroke-dasharray="5 5" opacity=".75">${svgTitle(`expanded AU boundary: 0–${expansion.expandUntilAU} AU`)}</circle>`;
+    svg += `<text x="${Math.min(width-270, cx+expandedBoundaryR+8)}" y="${Math.max(96, cy+32)}" class="svg-muted">expanded 0–${expansion.expandUntilAU} AU</text>`;
+  }
+
+  if (hasStableHabitableZone(system)) {
+    svg += `<circle cx="${cx}" cy="${cy}" r="${hzOuterR}" fill="#2e7d55" opacity=".12"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${hzInnerR}" fill="#090b11" opacity=".72"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${hzInnerR}" fill="none" stroke="#69c78f" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${hzOuterR}" fill="none" stroke="#69c78f" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    svg += `<text x="${Math.min(width-270, cx+hzOuterR+8)}" y="${Math.max(82, cy-6)}" class="svg-muted">HZ ${system.habitableZoneAU.inner}–${system.habitableZoneAU.outer} AU</text>`;
+  } else {
+    svg += `<text x="20" y="74" class="svg-muted">No stable habitable zone: black-hole-centred system.</text>`;
+  }
+
+  if (frostR < maxR + 16) {
+    svg += `<circle cx="${cx}" cy="${cy}" r="${frostR}" fill="none" stroke="#85d7ff" stroke-width="1.4" stroke-dasharray="7 5"/>`;
+    svg += `<text x="${cx+frostR+8}" y="${cy+18}" class="svg-muted">frost ${system.frostLineAU} AU</text>`;
+  }
+
+  visibleBelts.forEach((b, i) => {
+    const r = expandedOrbitalRadiusAU(b.orbitAU, maxAU, maxR, expansion);
+    svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#aaa" stroke-width="5" opacity=".20">${svgTitle(beltTooltip(b))}</circle>`;
+    svg += `<text x="${cx+r+8}" y="${cy+38+(i%4)*18}" class="svg-muted">${escSvg(b.type)} ${b.orbitAU} AU</text>`;
+  });
+
+  const labelSlots = [];
+  visiblePlanets.forEach((p, i) => {
+    const orbitR = expandedOrbitalRadiusAU(p.orbitAU, maxAU, maxR, expansion);
+    const angle = -Math.PI / 2 + i * 2.399963229728653;
+    const x = cx + Math.cos(angle) * orbitR;
+    const y = cy + Math.sin(angle) * orbitR;
+    const bodyR = p.type.includes("giant") ? clamp(18 + p.radiusEarth * 1.6, 26, 48) : clamp(14 + p.radiusEarth * 6.2, 20, 34);
+    const labelRight = Math.cos(angle) >= 0;
+    let labelX = labelRight ? x + bodyR + 8 : x - 128;
+    let labelY = y - 6;
+    labelX = clamp(labelX, 28, width - 220);
+    labelY = clamp(labelY, 110, height - 70);
+    labelX = clamp(labelX, 28, width - 220);
+    labelY = clamp(labelY, 82, height - 64);
+
+    // Basic label nudging to reduce overlap.
+    for (let step = 0; step < 6; step++) {
+      const conflict = labelSlots.some(slot => Math.abs(slot.x - labelX) < 120 && Math.abs(slot.y - labelY) < 28);
+      if (!conflict) break;
+      labelY += 18;
+    }
+    labelSlots.push({ x: labelX, y: labelY });
+
+    svg += `<circle cx="${cx}" cy="${cy}" r="${orbitR}" fill="none" stroke="#2e3547" stroke-width="1" stroke-dasharray="4 6" opacity=".75">${svgTitle(`${p.name} orbit ${p.orbitAU} AU`)}</circle>`;
+    if (p.rings) svg += `<ellipse cx="${x}" cy="${y}" rx="${bodyR*1.75}" ry="${bodyR*.55}" fill="none" stroke="#cfc7a0" stroke-width="2" opacity=".8">${svgTitle(planetTooltip(p, system))}</ellipse>`;
+    svg += `<circle cx="${x}" cy="${y}" r="${bodyR}" fill="${bodyFill(p.type)}" stroke="#ffffff77" stroke-width="1.5">${svgTitle(planetTooltip(p, system))}</circle>`;
+    svg += `<text x="${labelX}" y="${labelY}" class="svg-label">${escSvg(p.name)}</text>`;
+    svg += `<text x="${labelX}" y="${labelY+15}" class="svg-muted">${p.orbitAU} AU</text>`;
+  });
+
+  if (system.stars.length === 1) {
+    const star = system.stars[0];
+    const starR = clamp(28 + Math.sqrt(Math.max(star.radiusSolar, 0.01)) * 32, 26, 82);
+    svg += `<circle cx="${cx}" cy="${cy}" r="${starR}" fill="${bodyFill(star.type)}" stroke="#fff8" stroke-width="2">${svgTitle(starTooltip(star))}</circle>`;
+    svg += `<text x="${cx+starR+10}" y="${cy+4}" class="svg-label">${escSvg(star.label)}</text>`;
+  } else {
+    const sep = 22;
+    system.stars.forEach((star, i) => {
+      const starR = clamp(14 + Math.sqrt(Math.max(star.radiusSolar, 0.01)) * 18, 14, 44);
+      const x = cx + (i === 0 ? -sep : sep);
+      svg += `<circle cx="${x}" cy="${cy}" r="${starR}" fill="${bodyFill(star.type)}" stroke="#fff8" stroke-width="2">${svgTitle(starTooltip(star))}</circle>`;
+    });
+    svg += `<text x="${cx+58}" y="${cy+4}" class="svg-label">binary centre</text>`;
+  }
+
+  svg += `</svg></div>`;
+  return svg;
+}
+
+
+function isBlackHoleCentredSystem(system) {
+  return system.stars.some(star => {
+    const type = String(star.type || "").toLowerCase();
+    const label = String(star.label || "").toLowerCase();
+    return type.includes("black_hole") || type.includes("black hole") || label.includes("black hole");
+  });
+}
+
+function hasStableHabitableZone(system) {
+  return !isBlackHoleCentredSystem(system);
 }
 
 function renderSystemSvg(system) {
   const opts = displayOptions();
   const visiblePlanets = system.planets.filter(p => !p.hidden);
   const visibleBelts = system.belts.filter(b => !b.hidden);
-  const visibleStations = opts.stations ? (system.stations || []).filter(s => !s.hidden) : [];
   const gateAU = system.stargateAU || stargateDistanceAU(system);
-  const maxOrbit = Math.max(system.habitableZoneAU.outer * 1.15, ...visiblePlanets.map(p => p.orbitAU), ...visibleBelts.map(b => b.orbitAU), ...visibleStations.map(s => s.orbitAU), opts.stargate ? gateAU : 0, 1);
+  const maxOrbit = Math.max(
+    system.habitableZoneAU.outer * 1.15,
+    ...visiblePlanets.map(p => p.orbitAU),
+    ...visibleBelts.map(b => b.orbitAU),
+    gateAU,
+    1
+  );
   const expansion = detectDenseInnerCluster(visiblePlanets, visibleBelts, gateAU);
-  const width = systemProjectionWidth(maxOrbit, visiblePlanets.length + visibleBelts.length + visibleStations.length + (opts.stargate ? 1 : 0), expansion);
-  const height = 460, left = 150, right = 130, centerY = 360;
+  const width = systemProjectionWidth(maxOrbit, visiblePlanets.length + visibleBelts.length + (opts.stargate ? 1 : 0), expansion);
+  const height = 700, left = 210, right = 180, centerY = 520;
   const scale = (width - left - right) / maxOrbit;
   const xForAU = au => expandedSystemX(au, maxOrbit, left, right, width, expansion);
+
   let svg = `<svg class="system-projection-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Linear star system projection" style="width:${width}px; min-width:${width}px;">`;
   svg += `<rect x="0" y="0" width="${width}" height="${height}" fill="#090b11"/>`;
-  svg += `<text x="18" y="24" class="svg-label">Linear orbit projection</text>`;
-  svg += `<text x="18" y="44" class="svg-muted">AU bar uses true AU labels. All planets are shown above the AU axis; crowded regions may be locally expanded for readability.</text>`;
+  svg += `<text x="18" y="26" class="svg-label">Linear orbit projection</text>`;
+  svg += `<text x="18" y="48" class="svg-muted">All planets are shown above the AU axis. AU labels remain true distances. Linear projection is scrollable; dense inner regions may be widened for readability.</text>`;
+
   if (expansion?.enabled) {
-    svg += `<text x="18" y="64" class="svg-muted">Expanded scale active: 0–${expansion.expandUntilAU} AU is visibly bracketed and stretched horizontally to prevent clustered bodies overlapping.</text>`;
+    svg += `<text x="18" y="68" class="svg-muted">Expanded AU segment: 0–${expansion.expandUntilAU} AU has extra horizontal space to prevent crowding.</text>`;
   }
+
   svg += `<line x1="${left}" y1="${centerY}" x2="${width-right}" y2="${centerY}" stroke="#3a4254" stroke-width="2"/>`;
-  const hzX1 = xForAU(system.habitableZoneAU.inner), hzX2 = xForAU(system.habitableZoneAU.outer);
+
+  const hzX1 = xForAU(system.habitableZoneAU.inner);
+  const hzX2 = xForAU(system.habitableZoneAU.outer);
   const hzBandY = centerY - 30;
   const hzBandH = 60;
-  svg += `<rect x="${hzX1}" y="${hzBandY}" width="${Math.max(2, hzX2-hzX1)}" height="${hzBandH}" fill="#2e7d55" opacity=".24"/>`;
-  svg += `<line x1="${hzX1}" y1="${hzBandY-10}" x2="${hzX1}" y2="${hzBandY+hzBandH+10}" stroke="#69c78f" stroke-width="1.5" stroke-dasharray="4 4"/>`;
-  svg += `<line x1="${hzX2}" y1="${hzBandY-10}" x2="${hzX2}" y2="${hzBandY+hzBandH+10}" stroke="#69c78f" stroke-width="1.5" stroke-dasharray="4 4"/>`;
-  svg += `<text x="${hzX1+5}" y="${hzBandY-10}" class="svg-muted">HZ ${system.habitableZoneAU.inner}–${system.habitableZoneAU.outer} AU</text>`;
+  if (hasStableHabitableZone(system)) {
+    svg += `<rect x="${hzX1}" y="${hzBandY}" width="${Math.max(2, hzX2-hzX1)}" height="${hzBandH}" fill="#2e7d55" opacity=".24"/>`;
+    svg += `<line x1="${hzX1}" y1="${hzBandY-10}" x2="${hzX1}" y2="${hzBandY+hzBandH+10}" stroke="#69c78f" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    svg += `<line x1="${hzX2}" y1="${hzBandY-10}" x2="${hzX2}" y2="${hzBandY+hzBandH+10}" stroke="#69c78f" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    svg += `<text x="${hzX1+5}" y="${hzBandY-12}" class="svg-muted">HZ ${system.habitableZoneAU.inner}–${system.habitableZoneAU.outer} AU</text>`;
+  } else {
+    svg += `<rect x="${left}" y="${hzBandY}" width="${Math.max(2, width-left-right)}" height="${hzBandH}" fill="#5c3645" opacity=".16"/>`;
+    svg += `<text x="${left+8}" y="${hzBandY-12}" class="svg-muted">No stable habitable zone: black-hole-centred system</text>`;
+  }
+
   if (expansion?.enabled) {
     const expandX1 = xForAU(0);
     const expandX2 = xForAU(expansion.expandUntilAU);
-    const bracketY = centerY + 58;
+    const bracketY = centerY + 62;
     svg += `<rect x="${expandX1}" y="${centerY-18}" width="${Math.max(2, expandX2-expandX1)}" height="36" fill="#89b4ff" opacity=".12"/>`;
-    svg += `<line x1="${expandX1}" y1="${centerY-42}" x2="${expandX1}" y2="${centerY+42}" stroke="#89b4ff" stroke-width="2" stroke-dasharray="4 4"/>`;
-    svg += `<line x1="${expandX2}" y1="${centerY-42}" x2="${expandX2}" y2="${centerY+42}" stroke="#89b4ff" stroke-width="2" stroke-dasharray="4 4"/>`;
+    svg += `<line x1="${expandX1}" y1="${centerY-56}" x2="${expandX1}" y2="${centerY+56}" stroke="#89b4ff" stroke-width="2" stroke-dasharray="4 4"/>`;
+    svg += `<line x1="${expandX2}" y1="${centerY-56}" x2="${expandX2}" y2="${centerY+56}" stroke="#89b4ff" stroke-width="2" stroke-dasharray="4 4"/>`;
     svg += `<line x1="${expandX1}" y1="${bracketY}" x2="${expandX2}" y2="${bracketY}" stroke="#89b4ff" stroke-width="3"/>`;
     svg += `<line x1="${expandX1}" y1="${bracketY-12}" x2="${expandX1}" y2="${bracketY+12}" stroke="#89b4ff" stroke-width="3"/>`;
     svg += `<line x1="${expandX2}" y1="${bracketY-12}" x2="${expandX2}" y2="${bracketY+12}" stroke="#89b4ff" stroke-width="3"/>`;
-    svg += `<text x="${expandX1+10}" y="${bracketY+28}" class="svg-label">expanded AU scale: 0–${expansion.expandUntilAU} AU</text>`;
-    svg += `<text x="${expandX1+10}" y="${bracketY+44}" class="svg-muted">This segment is stretched horizontally for readability; AU labels remain the true distances.</text>`;
+    svg += `<text x="${expandX1+10}" y="${bracketY+24}" class="svg-label">expanded AU scale: 0–${expansion.expandUntilAU} AU</text>`;
+    svg += `<text x="${expandX1+10}" y="${bracketY+42}" class="svg-muted">This segment is stretched horizontally for readability.</text>`;
   }
 
   const frostX = xForAU(system.frostLineAU);
   if (frostX < width - right + 20) {
     svg += `<line x1="${frostX}" y1="${centerY-54}" x2="${frostX}" y2="${centerY+54}" stroke="#85d7ff" stroke-width="1.5" stroke-dasharray="6 4"/>`;
-    svg += `<text x="${frostX+5}" y="${centerY+70}" class="svg-muted">frost ${system.frostLineAU} AU</text>`;
+    svg += `<text x="${frostX+5}" y="${centerY+68}" class="svg-muted">frost ${system.frostLineAU} AU</text>`;
   }
+
   expandedTickValues(maxOrbit, expansion).forEach(au => {
     const x = xForAU(au);
     const major = Math.abs(au - Math.round(au)) < 0.0001;
     svg += `<line x1="${x}" y1="${centerY-(major ? 10 : 6)}" x2="${x}" y2="${centerY+(major ? 10 : 6)}" stroke="#546075"/>`;
-    svg += `<text x="${x-10}" y="${centerY+32}" class="svg-muted">${Number(au.toFixed(2))}</text>`;
+    svg += `<text x="${x-12}" y="${centerY+42}" class="svg-muted">${Number(au.toFixed(2))}</text>`;
   });
-  svg += `<text x="${width-right-20}" y="${centerY+44}" class="svg-muted">AU</text>`;
+  svg += `<text x="${width-right-18}" y="${centerY+56}" class="svg-muted">AU</text>`;
+
   const starBaseX = left;
   if (system.stars.length === 1) {
     const star = system.stars[0];
-    const r = clamp(24 + Math.sqrt(Math.max(star.radiusSolar, 0.01)) * 34, 20, 100);
+    const r = clamp(34 + Math.sqrt(Math.max(star.radiusSolar, 0.01)) * 42, 30, 120);
     svg += `<circle cx="${starBaseX}" cy="${centerY}" r="${r}" fill="${bodyFill(star.type)}" stroke="#fff8" stroke-width="2">${svgTitle(starTooltip(star))}</circle>`;
-    svg += `<text x="${starBaseX-38}" y="${centerY-r-14}" class="svg-label">${escSvg(star.label)} · ${star.radiusSolar}× Sol radius</text>`;
+    svg += `<text x="${starBaseX-r}" y="${centerY-r-14}" class="svg-label">${escSvg(star.label)} · ${star.radiusSolar}× Sol radius</text>`;
   } else {
-    const sep = clamp(system.binary.separationAU * scale, 18, 70);
+    const sep = clamp(system.binary.separationAU * scale, 18, 60);
     system.stars.forEach((star, i) => {
-      const r = clamp(22 + Math.sqrt(Math.max(star.radiusSolar, 0.01)) * 30, 18, 92);
+      const r = clamp(30 + Math.sqrt(Math.max(star.radiusSolar, 0.01)) * 36, 26, 110);
       const y = centerY + (i === 0 ? -sep/2 : sep/2);
       svg += `<circle cx="${starBaseX}" cy="${y}" r="${r}" fill="${bodyFill(star.type)}" stroke="#fff8" stroke-width="2">${svgTitle(starTooltip(star))}</circle>`;
       svg += `<text x="${starBaseX+r+10}" y="${y+4}" class="svg-muted">${escSvg(star.role)}: ${escSvg(star.label)} · ${star.radiusSolar}× Sol radius</text>`;
     });
     svg += `<ellipse cx="${starBaseX}" cy="${centerY}" rx="${Math.max(22, sep/1.25)}" ry="${Math.max(22, sep)}" fill="none" stroke="#596071" stroke-dasharray="3 3"/>`;
   }
-  visibleBelts.forEach(b => {
+
+  visibleBelts.forEach((b, i) => {
     const x = xForAU(b.orbitAU);
-    svg += `<rect x="${x-4}" y="100" width="8" height="${height-200}" fill="#aaa" opacity=".28">${svgTitle(beltTooltip(b))}</rect>`;
-    svg += `<text x="${x+6}" y="252" class="svg-muted">${escSvg(b.type)} ${b.orbitAU} AU</text>`;
+    svg += `<rect x="${x-4}" y="${centerY-42}" width="8" height="84" fill="#aaa" opacity=".28">${svgTitle(beltTooltip(b))}</rect>`;
+    const labelY = centerY + 82 + (i % 2) * 18;
+    svg += `<text x="${x+8}" y="${labelY}" class="svg-muted">${escSvg(b.type)} ${b.orbitAU} AU</text>`;
   });
-  if (opts.stargate) {
+
+  {
     const gateX = xForAU(gateAU);
-    svg += `<line x1="${gateX}" y1="48" x2="${gateX}" y2="${height-48}" stroke="#b38cff" stroke-width="2" stroke-dasharray="8 5"/>`;
-    svg += `<circle cx="${gateX}" cy="${centerY}" r="28" fill="none" stroke="#b38cff" stroke-width="4">${svgTitle(stargateTooltip(system))}</circle>`;
-    svg += `<circle cx="${gateX}" cy="${centerY}" r="10" fill="#b38cff" opacity=".75">${svgTitle(stargateTooltip(system))}</circle>`;
-    svg += `<text x="${gateX+10}" y="70" class="svg-label">Stargate ${gateAU} AU</text>`;
-    svg += `<text x="${gateX+10}" y="88" class="svg-muted">max(50×√M, outer edge)</text>`;
+    svg += `<line x1="${gateX}" y1="70" x2="${gateX}" y2="${height-86}" stroke="#b38cff" stroke-width="2" stroke-dasharray="8 5"/>`;
+    svg += `<circle cx="${gateX}" cy="${centerY}" r="26" fill="none" stroke="#b38cff" stroke-width="4">${svgTitle(stargateTooltip(system))}</circle>`;
+    svg += `<circle cx="${gateX}" cy="${centerY}" r="9" fill="#b38cff" opacity=".75">${svgTitle(stargateTooltip(system))}</circle>`;
+    svg += `<text x="${gateX+10}" y="84" class="svg-label">Stargate ${gateAU} AU</text>`;
+    svg += `<text x="${gateX+10}" y="102" class="svg-muted">max(50×√M, outer edge)</text>`;
   }
 
-  const projectedPlanets = assignProjectionRows(visiblePlanets, xForAU, expansion?.enabled ? 190 : 130);
-  projectedPlanets.forEach(({ item: p, x, row }, i) => {
+  const projectedPlanets = assignProjectionRows(visiblePlanets, xForAU, expansion?.enabled ? 460 : 360);
+  projectSystemLabelPositions(projectedPlanets).forEach(({ item: p, x, row, labelX, nameY, orbitY }) => {
     const r = visibleSystemRadius(p);
     const y = centerY + row;
-    const labelX = expansion?.enabled ? x - r - 12 : x - r - 6;
-    const nameY = Math.max(78, y - r - 28);
-    const orbitY = Math.max(96, y - r - 10);
 
     svg += `<line x1="${x}" y1="${centerY}" x2="${x}" y2="${y}" stroke="#3a4254" stroke-width="1"/>`;
-    svg += `<circle class="system-planet-hover-target" cx="${x}" cy="${y}" r="${Math.max(r + 24, 64)}" fill="transparent">${svgTitle(planetTooltip(p, system))}</circle>`;
+    svg += `<circle class="system-planet-hover-target" cx="${x}" cy="${y}" r="${Math.max(r + 22, 58)}" fill="transparent">${svgTitle(planetTooltip(p, system))}</circle>`;
 
     if (opts.zones) {
-      const zoneR = clamp(r * 2.05, 38, 88);
-      svg += `<circle cx="${x}" cy="${y}" r="${zoneR}" fill="none" stroke="#89b4ff" stroke-width="1.5" stroke-dasharray="5 4" opacity=".7">${svgTitle(`${p.name} sovereign volume\nRadius: ${ZONE_OF_CONTROL_KM.toLocaleString()} km\nApprox: ${ZONE_OF_CONTROL_AU.toFixed(6)} AU`)}</circle>`;
+      const zoneR = clamp(r * 1.8, 32, 72);
+      svg += `<circle cx="${x}" cy="${y}" r="${zoneR}" fill="none" stroke="#89b4ff" stroke-width="1.5" stroke-dasharray="5 4" opacity=".65">${svgTitle(`${p.name} sovereign volume\nRadius: ${ZONE_OF_CONTROL_KM.toLocaleString()} km\nApprox: ${ZONE_OF_CONTROL_AU.toFixed(6)} AU`)}</circle>`;
     }
 
     if (p.rings) svg += `<ellipse cx="${x}" cy="${y}" rx="${r*1.75}" ry="${r*.55}" fill="none" stroke="#cfc7a0" stroke-width="2" opacity=".8">${svgTitle(planetTooltip(p, system))}</ellipse>`;
     svg += `<circle cx="${x}" cy="${y}" r="${r}" fill="${bodyFill(p.type)}" stroke="#ffffff77" stroke-width="1.5">${svgTitle(planetTooltip(p, system))}</circle>`;
-
-    // Label block above each body. Name and AU are stacked to avoid crossing the AU bar.
     svg += `<text x="${labelX}" y="${nameY}" class="svg-label">${escSvg(p.name)}</text>`;
     svg += `<text x="${labelX}" y="${orbitY}" class="svg-muted">${p.orbitAU} AU</text>`;
   });
-    const y = centerY + row;
-    const labelY = row < 0 ? y - r - 10 : y + r + 18;
-    const orbitLabelY = row < 0 ? y + r + 16 : y - r - 10;
-
-    svg += `<line x1="${x}" y1="${centerY}" x2="${x}" y2="${y}" stroke="#3a4254" stroke-width="1"/>`;
-    svg += `<circle class="system-planet-hover-target" cx="${x}" cy="${y}" r="${Math.max(r + 24, 64)}" fill="transparent">${svgTitle(planetTooltip(p, system))}</circle>`;
-
-    if (opts.zones) {
-      const zoneR = clamp(r * 2.25, 42, 125);
-      svg += `<circle cx="${x}" cy="${y}" r="${zoneR}" fill="none" stroke="#89b4ff" stroke-width="1.5" stroke-dasharray="5 4" opacity=".7">${svgTitle(`${p.name} sovereign volume\nRadius: ${ZONE_OF_CONTROL_KM.toLocaleString()} km\nApprox: ${ZONE_OF_CONTROL_AU.toFixed(6)} AU`)}</circle>`;
-    }
-
-    if (p.rings) svg += `<ellipse cx="${x}" cy="${y}" rx="${r*1.75}" ry="${r*.55}" fill="none" stroke="#cfc7a0" stroke-width="2" opacity=".8">${svgTitle(planetTooltip(p, system))}</ellipse>`;
-    svg += `<circle cx="${x}" cy="${y}" r="${r}" fill="${bodyFill(p.type)}" stroke="#ffffff55" stroke-width="1.5">${svgTitle(planetTooltip(p, system))}</circle>`;
-    const labelX = expansion?.enabled ? x - r - 10 : x - r;
-    svg += `<text x="${labelX}" y="${labelY}" class="svg-label">${escSvg(p.name)}</text>`;
-    svg += `<text x="${labelX}" y="${orbitLabelY}" class="svg-muted">${p.orbitAU} AU</text>`;
-  });
-  if (visibleStations.length) {
-    const projectedStations = assignProjectionRows(visibleStations.map(s => ({ ...s, orbitAU: s.orbitAU })), xForAU, expansion?.enabled ? 160 : 120);
-    projectedStations.forEach(({ item: s, x, row }, i) => {
-      const y = Math.max(70, centerY + row - 28);
-      const labelX = x + 12;
-      svg += `<g class="tooltip-body" ${tooltipAttrs(stationTooltip(s))}>`;
-      svg += `<rect x="${x-8}" y="${y-8}" width="16" height="16" fill="#c7b7ff" stroke="#ffffff77" stroke-width="1.5" transform="rotate(45 ${x} ${y})"/>`;
-      svg += `<circle cx="${x}" cy="${y}" r="18" fill="transparent" pointer-events="all"/>`;
-      svg += `</g>`;
-      svg += `<line x1="${x}" y1="${centerY}" x2="${x}" y2="${y}" stroke="#c7b7ff" stroke-width="1" stroke-dasharray="3 4" opacity=".7"/>`;
-      svg += `<text x="${labelX}" y="${y-10}" class="svg-label">${escSvg(s.name)}</text>`;
-      svg += `<text x="${labelX}" y="${y+8}" class="svg-muted">${escSvg(s.type)}</text>`;
-    });
-  }
 
   svg += `</svg>`;
   return svg;
@@ -2037,7 +2028,7 @@ function renderMoonItem(m, planetIndex, moonIndex) {
 
 function renderSinglePlanetSvg(p) {
   const moons = p.moons.filter(m => !m.hidden);
-  const width = 2600, height = 460, cx = 150, cy = 235;
+  const width = 2400, height = 320, cx = 130, cy = 160;
   const planetR = p.type.includes('giant') ? clamp(28 + p.radiusEarth * 3, 42, 75) : clamp(20 + p.radiusEarth * 10, 22, 46);
   const maxMoonOrbit = Math.max(...moons.map(m => m.orbitalPeriodDays), 1);
   let svg = `<div class="planet-card"><div class="planet-card-title">${escSvg(p.name)} — top-down moon projection</div>`;
@@ -2047,11 +2038,11 @@ function renderSinglePlanetSvg(p) {
   svg += `<text x="18" y="46" class="svg-muted">Planet and moon diameters are enlarged independently. Moon orbit spacing uses generated orbital period.</text>`;
   if (p.rings) svg += `<ellipse cx="${cx}" cy="${cy}" rx="${planetR*1.75}" ry="${planetR*.55}" fill="none" stroke="#cfc7a0" stroke-width="3" opacity=".85"/>`;
   svg += `<circle cx="${cx}" cy="${cy}" r="${planetR}" fill="${bodyFill(p.type)}" stroke="#ffffff55" stroke-width="1.5"/>`;
-  svg += `<text x="${cx-planetR}" y="${cy+planetR+34}" class="svg-muted">${escSvg(p.type)}, ${p.radiusEarth} R⊕</text>`;
+  svg += `<text x="${cx-planetR}" y="${cy+planetR+18}" class="svg-muted">${escSvg(p.type)}, ${p.radiusEarth} R⊕</text>`;
   moons.forEach((m, i) => {
     const orbit = 250 + (m.orbitalPeriodDays / maxMoonOrbit) * 1800;
     const x = cx + orbit;
-    const moonR = m.sizeClass.includes('large') ? 11 : m.sizeClass.includes('medium') ? 8 : m.sizeClass.includes('small') ? 6 : 4;
+    const moonR = m.sizeClass.includes('large') ? 16 : m.sizeClass.includes('medium') ? 12 : m.sizeClass.includes('small') ? 9 : 7;
     svg += `<line x1="${cx+planetR}" y1="${cy}" x2="${x}" y2="${cy}" stroke="#2e3547" stroke-width="1"/>`;
     svg += `<circle cx="${x}" cy="${cy}" r="${moonR}" fill="${bodyFill(m.composition)}" stroke="#ffffff55" stroke-width="1"/>`;
     svg += `<text x="${x-20}" y="${cy-18-(i%3)*16}" class="svg-muted">${escSvg(m.name)}</text>`;
@@ -2086,6 +2077,22 @@ Atmosphere: ${m.atmosphere}
 Life potential: ${m.lifePotential}`;
 }
 
+
+function assignMoonProjectionLayout(moons, maxMoonOrbit, cx, cy) {
+  // Orbital-style moon layout around the planet. Distances are symbolic, not true linear scale.
+  const baseR = 130;
+  const stepR = 48;
+  const angleStep = 2.399963229728653; // golden angle in radians for separation
+  return moons.map((m, i) => {
+    const ring = Math.floor(i / 5);
+    const orbitR = Math.min(285, baseR + ring * stepR + (i % 5) * 12);
+    const angle = -Math.PI / 2 + i * angleStep;
+    const x = cx + Math.cos(angle) * orbitR;
+    const y = cy + Math.sin(angle) * orbitR;
+    return { moon: m, x, y, orbitR, angle };
+  });
+}
+
 function renderPlanetSvgs(system) {
   const opts = displayOptions();
   const planets = system.planets.filter(p => !p.hidden);
@@ -2094,14 +2101,15 @@ function renderPlanetSvgs(system) {
   return planets.map(p => {
     const planetIndex = system.planets.indexOf(p);
     const moons = p.moons.filter(m => !m.hidden);
-    const width = 2600, height = 460, cx = 150, cy = 235;
-    const planetR = p.type.includes('giant') ? clamp(28 + p.radiusEarth * 3, 42, 75) : clamp(20 + p.radiusEarth * 10, 22, 46);
+    const width = 1500, height = 760, cx = 750, cy = 400;
+    const planetR = p.type.includes('giant') ? clamp(34 + p.radiusEarth * 3.4, 50, 88) : clamp(26 + p.radiusEarth * 11, 32, 58);
     const maxMoonOrbit = Math.max(...moons.map(m => m.orbitalPeriodDays), 1);
+    const laidOutMoons = assignMoonProjectionLayout(moons, maxMoonOrbit, cx, cy);
 
     let html = `<div class="planet-card">`;
     html += `<div class="planet-card-header">`;
     html += `<div class="planet-card-title" ${tooltipAttrs(planetTooltip(p, system))}>${escSvg(p.name)} — planet section</div>`;
-    html += `<p class="planet-card-summary">${planetDescription(p, system)}</p>`;
+    html += `<div class="planet-card-summary">${planetDescription(p, system)}</div>`;
     html += `<div class="planet-card-controls">`;
     html += `<button class="small" type="button" data-toggle-planet-section>Minimise planet section</button>`;
     html += `<button class="small" type="button" data-toggle-moons-section>${moons.length ? "Minimise moons" : "No visible moons"}</button>`;
@@ -2125,44 +2133,47 @@ function renderPlanetSvgs(system) {
     }
 
     html += `</div>`;
-    html += `<div class="planet-card-body">`;
+    html += `<div class="planet-card-body planet-orbital-surface">`;
 
-    let svg = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Top-down planet and moon projection for ${escSvg(p.name)}">`;
+    let svg = `<svg class="planet-orbital-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Orbital planet and moon projection for ${escSvg(p.name)}">`;
     svg += `<rect x="0" y="0" width="${width}" height="${height}" fill="#090b11"/>`;
-    svg += `<text x="18" y="26" class="svg-label">${escSvg(p.name)}</text>`;
-    svg += `<text x="18" y="46" class="svg-muted">Planet/moon sizes are enlarged. Sovereign volume is a 1,000,000 km radius marker, not to scale.</text>`;
 
-    if (opts.zones) {
-      const zoneR = clamp(planetR * 2.6, 70, 135);
-      svg += `<circle ${tooltipAttrs(`${p.name} sovereign volume\nRadius: ${ZONE_OF_CONTROL_KM.toLocaleString()} km\nApprox: ${ZONE_OF_CONTROL_AU.toFixed(6)} AU`)} cx="${cx}" cy="${cy}" r="${zoneR}" fill="none" stroke="#89b4ff" stroke-width="2" stroke-dasharray="6 5" opacity=".75"/>`;
-      svg += `<text x="${cx-zoneR}" y="${cy-zoneR-8}" class="svg-muted">1,000,000 km sovereign volume</text>`;
-    }
+    // Header and planet facts use reserved areas outside the orbital rings.
+    svg += `<text x="18" y="30" class="svg-label">${escSvg(p.name)}</text>`;
+    svg += `<text x="18" y="52" class="svg-muted">Moon orbits are symbolic. Body sizes and spacing are enlarged for readability.</text>`;
+    svg += `<text x="18" y="${height-34}" class="svg-muted">${escSvg(p.type)}, radius ${p.radiusEarth}× Earth, circumference ${planetCircumferenceKm(p.radiusEarth).toLocaleString()} km</text>`;
+    svg += `<text x="18" y="${height-16}" class="svg-muted">Atmosphere: ${escSvg(p.atmosphere)} · temperature: ${p.avgTempC}°C · day: ${p.dayLengthHours} h</text>`;
+
+    // No sovereign-volume marker in planet-section projections.
+
+    laidOutMoons.forEach(({ moon: m, orbitR }) => {
+      svg += `<circle cx="${cx}" cy="${cy}" r="${orbitR}" fill="none" stroke="#2e3547" stroke-width="1" stroke-dasharray="4 5" opacity=".75">${svgTitle(`${m.name} symbolic orbit`)}</circle>`;
+    });
 
     svg += `<g class="tooltip-body" ${tooltipAttrs(planetTooltip(p, system))}>`;
     svg += `<circle class="planet-hover-target" cx="${cx}" cy="${cy}" r="${Math.max(planetR + 22, 80)}" fill="transparent" pointer-events="all"/>`;
     if (p.rings) svg += `<ellipse cx="${cx}" cy="${cy}" rx="${planetR*1.75}" ry="${planetR*.55}" fill="none" stroke="#cfc7a0" stroke-width="3" opacity=".85"/>`;
-    svg += `<circle cx="${cx}" cy="${cy}" r="${planetR}" fill="${bodyFill(p.type)}" stroke="#ffffff55" stroke-width="1.5"/>`;
+    svg += `<circle cx="${cx}" cy="${cy}" r="${planetR}" fill="${bodyFill(p.type)}" stroke="#ffffff77" stroke-width="1.5"/>`;
     svg += `</g>`;
 
-    svg += `<text x="${cx-planetR}" y="${cy+planetR+34}" class="svg-muted">${escSvg(p.type)}, radius ${p.radiusEarth}× Earth, circumference ${planetCircumferenceKm(p.radiusEarth).toLocaleString()} km</text>`;
+    laidOutMoons.forEach(({ moon: m, x, y, angle }) => {
+      const moonR = m.sizeClass.includes('large') ? 16 : m.sizeClass.includes('medium') ? 12 : m.sizeClass.includes('small') ? 9 : 7;
+      const labelToRight = Math.cos(angle) >= 0;
+      const labelX = labelToRight ? x + 24 : x - 170;
+      let labelY = y - 8;
 
-    moons.forEach((m, i) => {
-      const orbit = 250 + (m.orbitalPeriodDays / maxMoonOrbit) * 1800;
-      const x = cx + orbit;
-      const moonR = m.sizeClass.includes('large') ? 11 : m.sizeClass.includes('medium') ? 8 : m.sizeClass.includes('small') ? 6 : 4;
-      const laneOffset = [-54, 0, 54, -92, 92][i % 5];
-      const moonY = cy + laneOffset;
+      // Keep moon labels out of the reserved top/bottom text zones.
+      labelY = clamp(labelY, 96, height - 112);
+
       svg += `<g class="moon-visual tooltip-body" ${tooltipAttrs(moonTooltip(m))}>`;
-      svg += `<line x1="${cx+planetR}" y1="${cy}" x2="${x}" y2="${moonY}" stroke="#2e3547" stroke-width="1"/>`;
-      svg += `<circle class="moon-hover-target" cx="${x}" cy="${moonY}" r="${Math.max(24, moonR + 12)}" fill="transparent" pointer-events="all"/>`;
-      svg += `<circle cx="${x}" cy="${moonY}" r="${moonR}" fill="${bodyFill(m.composition)}" stroke="#ffffff77" stroke-width="1"/>`;
+      svg += `<circle class="moon-hover-target" cx="${x}" cy="${y}" r="${Math.max(24, moonR + 12)}" fill="transparent" pointer-events="all"/>`;
+      svg += `<circle cx="${x}" cy="${y}" r="${moonR}" fill="${bodyFill(m.composition)}" stroke="#ffffff77" stroke-width="1"/>`;
       svg += `</g>`;
-      const moonLabelY = Math.max(32, moonY - moonR - 18);
-      svg += `<text class="moon-label" x="${x-28}" y="${moonLabelY}" class="svg-muted">${escSvg(m.name)}</text>`;
-      svg += `<text class="moon-label" x="${x-28}" y="${moonLabelY+16}" class="svg-muted">${moonCircumferenceKm(m.sizeClass).toLocaleString()} km circ.</text>`;
+      svg += `<text class="moon-label svg-label" x="${labelX}" y="${labelY}">${escSvg(m.name)}</text>`;
+      svg += `<text class="moon-label svg-muted" x="${labelX}" y="${labelY+15}">${moonCircumferenceKm(m.sizeClass).toLocaleString()} km circ.</text>`;
     });
 
-    if (!moons.length) svg += `<text x="245" y="${cy+4}" class="svg-muted">No visible moons/satellites</text>`;
+    if (!moons.length) svg += `<text x="${cx+90}" y="${cy+4}" class="svg-muted">No visible moons/satellites</text>`;
     svg += `</svg>`;
 
     html += svg;
