@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hard Sci‑Fi Star System Generator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>Star System Generator</h1>
+      <p>Hard sci‑fi procedural text generator with optimistic biology.</p>
+    </header>
+
+    <section class="panel controls">
+      <h2>Generation Criteria</h2>
+      <p class="hint">Hover over dropdown options to see how each choice affects generation.</p>
+
+      <div class="grid">
+        <label>
+          System architecture
+          <select id="architecture" title="Controls the overall star-system layout. Binary systems affect orbital stability, habitable zones and planet placement.">
+            <option value="single">Single star</option>
+            <option value="binary_circumbinary">Binary: circumbinary planets</option>
+            <option value="binary_s_type">Binary: planets around primary star</option>
+            <option value="random">Random</option>
+          </select>
+        </label>
+
+        <label>
+          Primary star type
+          <select id="starType" title="Select the primary star or central object. Different types affect luminosity, habitability, system size and lifespan.">
+            <option value="random" title="Weighted random main-sequence or exotic centre. Usually favours common, stable stars.">Random</option>
+            <option value="red_dwarf" title="Small, cool, extremely long-lived. Habitable worlds are close-in and often tidally locked; flare risk can be high.">Red dwarf / M type</option>
+            <option value="orange_dwarf" title="Stable, long-lived, favourable for habitable planets. Often the best life-supporting star option.">Orange dwarf / K type</option>
+            <option value="yellow_dwarf" title="Solar-like. Good habitable-zone stability, but shorter-lived than orange and red dwarfs.">Yellow dwarf / G type</option>
+            <option value="f_type" title="Hotter and brighter than the Sun. Wider habitable zone, but shorter lifetime and stronger UV stress.">F-type star</option>
+            <option value="a_type" title="Bright, blue-white, short-lived. Large planetary system possible, but complex life is unlikely due to short stable lifetime.">A-type star</option>
+            <option value="giant_star" title="Evolved swollen star. Inner planets are often scorched or engulfed; habitability is usually temporary or displaced outward.">Giant star</option>
+            <option value="supergiant_star" title="Extremely massive and luminous. Very short-lived, violent environment; planets are rare/hostile and habitability is essentially implausible.">Supergiant star</option>
+            <option value="white_dwarf" title="Compact remnant. Habitable zone is very close and difficult, but old stable remnant systems can exist.">White dwarf remnant</option>
+            <option value="neutron_star" title="Ultra-dense stellar remnant. Pulsar radiation and formation history make normal habitable planets extremely unlikely.">Neutron star / pulsar</option>
+            <option value="stellar_black_hole" title="Stellar-mass black hole. Little natural light; planets need external heating, disks, or companion stars.">Stellar black hole</option>
+            <option value="intermediate_black_hole" title="Intermediate-mass black hole. Exotic centre with weak direct light; stable orbits possible but normal habitability is very unlikely.">Intermediate black hole</option>
+            <option value="supermassive_black_hole" title="Galaxy-core scale black hole. Extreme radiation/tidal environment if active; generation becomes exotic and hostile by default.">Supermassive black hole</option>
+          </select>
+        </label>
+
+        <label>
+          Secondary star type
+          <select id="secondaryStarType" title="Used for binary systems. Companion properties influence orbital stability and planetary environments.">
+            <option value="random" title="Weighted random main-sequence or exotic centre. Usually favours common, stable stars.">Random</option>
+            <option value="red_dwarf" title="Small, cool, extremely long-lived. Habitable worlds are close-in and often tidally locked; flare risk can be high.">Red dwarf / M type</option>
+            <option value="orange_dwarf" title="Stable, long-lived, favourable for habitable planets. Often the best life-supporting star option.">Orange dwarf / K type</option>
+            <option value="yellow_dwarf" title="Solar-like. Good habitable-zone stability, but shorter-lived than orange and red dwarfs.">Yellow dwarf / G type</option>
+            <option value="f_type" title="Hotter and brighter than the Sun. Wider habitable zone, but shorter lifetime and stronger UV stress.">F-type star</option>
+            <option value="a_type" title="Bright, blue-white, short-lived. Large planetary system possible, but complex life is unlikely due to short stable lifetime.">A-type star</option>
+            <option value="giant_star" title="Evolved swollen star. Inner planets are often scorched or engulfed; habitability is usually temporary or displaced outward.">Giant star</option>
+            <option value="supergiant_star" title="Extremely massive and luminous. Very short-lived, violent environment; planets are rare/hostile and habitability is essentially implausible.">Supergiant star</option>
+            <option value="white_dwarf" title="Compact remnant. Habitable zone is very close and difficult, but old stable remnant systems can exist.">White dwarf remnant</option>
+            <option value="neutron_star" title="Ultra-dense stellar remnant. Pulsar radiation and formation history make normal habitable planets extremely unlikely.">Neutron star / pulsar</option>
+            <option value="stellar_black_hole" title="Stellar-mass black hole. Little natural light; planets need external heating, disks, or companion stars.">Stellar black hole</option>
+            <option value="intermediate_black_hole" title="Intermediate-mass black hole. Exotic centre with weak direct light; stable orbits possible but normal habitability is very unlikely.">Intermediate black hole</option>
+            <option value="supermassive_black_hole" title="Galaxy-core scale black hole. Extreme radiation/tidal environment if active; generation becomes exotic and hostile by default.">Supermassive black hole</option>
+          </select>
+        </label>
+        <label>
+          Significant planetary bodies
+          <select id="planetCount" title="Number of major planetary bodies. Random mode generates 1–10 bodies with a bias toward smaller systems.">
+            <option value="random" title="Weighted random: 1–10 significant bodies, biased toward lower counts.">Random weighted 1–10</option>
+            <option value="1" title="Sparse system: one significant planetary body.">1</option>
+            <option value="2" title="Small system: two significant planetary bodies.">2</option>
+            <option value="3" title="Small-to-medium system: three significant planetary bodies.">3</option>
+            <option value="4" title="Balanced default: four significant planetary bodies." selected>4</option>
+            <option value="5" title="Moderately populated system.">5</option>
+            <option value="6" title="Populated system with more orbital crowding.">6</option>
+            <option value="7" title="Large system; more bodies, belts, and possible giants.">7</option>
+            <option value="8" title="Large system; visuals may need horizontal scrolling.">8</option>
+            <option value="9" title="Very large system; orbital spacing becomes more important.">9</option>
+            <option value="10" title="Maximum random-range fixed value; dense significant-body system.">10</option>
+          </select>
+        </label>
+
+        <label>
+          Life bias
+          <select id="lifeBias" title="Controls how likely life-supporting worlds are to appear. Conservative is stricter, Optimistic is more generous, Forced guarantees at least one.">
+            <option value="balanced" title="Default setting. Life appears when conditions are favourable but remains uncommon.">Balanced physics + optimistic biology</option>
+            <option value="conservative" title="Strict realism. Life is rare and requires excellent conditions.">Conservative</option>
+            <option value="optimistic" title="Life is more likely to emerge and persist on marginally habitable worlds.">Optimistic</option>
+            <option value="forced" title="Guarantees at least one life-supporting world regardless of normal generation odds.">Force at least one life-supporting body</option>
+          </select>
+        </label>
+
+        <label>
+          System age
+          <select id="systemAge" title="Older systems have longer evolutionary histories. Younger systems tend to be more geologically active and impact-prone.">
+            <option value="random">Random</option>
+            <option value="young" title="~0.2–1.8 billion years old. More impacts, stronger geology, less time for evolution.">Young</option>
+            <option value="mature" title="~2–7 billion years old. Often the best balance for stable climates and developed biospheres.">Mature</option>
+            <option value="ancient" title="~7–11.5 billion years old. Long evolutionary history but potentially declining geological activity.">Ancient</option>
+          </select>
+        </label>
+
+        <label>
+          Metallicity
+          <select id="metallicity" title="Heavy-element abundance during formation. Higher metallicity generally produces more rocky planets and gas giants.">
+            <option value="normal" title="Typical stellar-neighbourhood composition.">Normal</option>
+            <option value="low" title="Few heavy elements. Rocky planets are less common and giant planets may be smaller.">Low</option>
+            <option value="high" title="Rich in heavy elements. Increases likelihood of rocky planets and gas giants.">High</option>
+            <option value="random">Random</option>
+          </select>
+        </label>
+
+        <label>
+          Rich in element
+          <select id="richElement" title="Biases planetary composition toward a specific element or material family. This affects descriptions, compositions, belts and some planet-type flavour.">
+            <option value="none" title="No special elemental enrichment. Uses normal metallicity and planet-type rules.">None / normal mix</option>
+            <option value="iron" title="Produces more dense metal-rich bodies, larger cores, stronger magnetic-field odds and metal-rich belts.">Iron</option>
+            <option value="carbon" title="Favours carbon-rich terrestrial planets, graphite/carbide crusts and carbonaceous belts.">Carbon</option>
+            <option value="silicon" title="Favours rocky silicate planets, mineral-rich crusts and common terrestrial bodies.">Silicon / silicates</option>
+            <option value="oxygen" title="Favours oxide minerals, water-bearing chemistry and oxidised rocky worlds.">Oxygen / oxides</option>
+            <option value="water" title="Favours ocean worlds, icy bodies, hydrated minerals and volatile-rich outer belts.">Water / volatiles</option>
+            <option value="nitrogen" title="Favours nitrogen-rich atmospheres, ammonia chemistry and volatile inventories on cold worlds.">Nitrogen</option>
+            <option value="sulfur" title="Favours volcanic sulphur chemistry, sulphide minerals and harsh atmospheric traces.">Sulfur</option>
+            <option value="uranium" title="Favours radiogenic heating, long-lived geology and rare heavy-element deposits. Useful for exotic or resource-rich settings.">Uranium / thorium</option>
+            <option value="gold" title="Rare noble-metal enrichment. Mostly affects resource flavour rather than habitability.">Gold / noble metals</option>
+            <option value="helium3" title="Favours gas giants, ice giants and lunar regolith with fusion-fuel flavour.">Helium-3</option>
+            <option value="random" title="Randomly chooses an elemental richness bias during generation.">Random</option>
+          </select>
+        </label>
+
+        <label>
+          Seed
+          <input id="seed" type="text" placeholder="Optional; repeatable generation" title="Generation seed. Identical settings and seed produce identical systems." />
+        </label>
+      </div>
+
+      <fieldset>
+        <legend>Locks / requirements</legend>
+        <label><input type="checkbox" id="requireLife" title="Guarantees at least one life-supporting world somewhere in the generated system." /> Must include at least one life-supporting body</label>
+        <label><input type="checkbox" id="requireBelt" title="Guarantees at least one asteroid belt or equivalent small-body region." /> Must include asteroid belt</label>
+        <label><input type="checkbox" id="requireGasGiant" title="Guarantees at least one gas giant or ice giant." /> Must include gas giant</label>
+        <label><input type="checkbox" id="allowTidallyLockedLife" checked title="Allows tidally locked planets to qualify as habitable if other conditions are favourable." /> Allow tidally locked habitable worlds</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Projection displays</legend>
+        <label><input type="checkbox" id="showStargate" checked title="Shows the system stargate. Distance uses: max(50 × √stellar mass, outer major planet/debris edge + safety buffer)." /> Show stargate</label>
+        <label><input type="checkbox" id="showZonesOfControl" checked title="Shows each planet's sovereign volume: a 1,000,000 km radius bubble around the planet. Not to scale on wide AU projections." /> Show planetary zones of control / sovereign volumes</label>
+        <label><input type="checkbox" id="showSolOverlay" title="Overlays Sol at 1 solar radius for visual comparison against the generated system's primary star. This is radius-comparative, not true AU scale." /> Overlay Sol comparison on system projection</label>
+      </fieldset>
+
+      <div class="buttons">
+        <button id="generateBtn">Generate system</button>
+        <button id="copyBtn" type="button">Copy text</button>
+        <button id="downloadJsonBtn" type="button">Download JSON</button>
+      </div>
+    </section>
+
+    <section class="panel output">
+      <h2>Generated System</h2>
+      <div id="actions" class="actions"></div>
+      <div class="visual-block">
+        <h3>System projection</h3>
+        <div id="systemVisual" class="visual-surface">Generate a system to draw projection.</div>
+      </div>
+      <div class="visual-block">
+        <h3>Planet sections</h3>
+        <div id="planetVisuals" class="planet-visuals">Generate a system to draw planet sections.</div>
+      </div>
+      <pre id="output">Set criteria, then generate a system.</pre>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
