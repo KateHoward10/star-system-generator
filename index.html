@@ -93,6 +93,19 @@
         </label>
 
         <label>
+          Required life complexity
+          <select id="lifeComplexity" title="Sets the minimum biological complexity required when life is forced or favoured. Higher settings are harder to satisfy.">
+            <option value="any" title="No minimum. Life complexity depends normally on generated conditions." selected>Any / no minimum</option>
+            <option value="prebiotic" title="Requires at least prebiotic chemistry on a suitable body.">Prebiotic chemistry</option>
+            <option value="single_celled" title="Requires at least single-celled microbial life.">Single-celled life</option>
+            <option value="multicellular_simple" title="Requires simple multicellular life such as mats, colonies, fungi-like ecosystems or primitive organisms.">Simple multicellular life</option>
+            <option value="complex_life" title="Requires complex multicellular ecosystems. Needs long-term stability and favourable chemistry.">Complex life</option>
+            <option value="animal_life" title="Requires mobile animal-like life. Favours oxygenated, stable, nutrient-rich worlds.">Complex animal-like life</option>
+            <option value="technological_life" title="Very rare by default. Used to force a civilisation-candidate world for setting generation.">Technological civilisation candidate</option>
+          </select>
+        </label>
+
+        <label>
           System age
           <select id="systemAge" title="Older systems have longer evolutionary histories. Younger systems tend to be more geologically active and impact-prone.">
             <option value="random">Random</option>
@@ -141,14 +154,16 @@
         <label><input type="checkbox" id="requireLife" title="Guarantees at least one life-supporting world somewhere in the generated system." /> Must include at least one life-supporting body</label>
         <label><input type="checkbox" id="requireBelt" title="Guarantees at least one asteroid belt or equivalent small-body region." /> Must include asteroid belt</label>
         <label><input type="checkbox" id="requireGasGiant" title="Guarantees at least one gas giant or ice giant." /> Must include gas giant</label>
+        <label><input type="checkbox" id="requireColonisation" title="Guarantees at least one terrestrial body with an atmosphere inside the habitable zone." /> Must include at least one body suitable for colonisation</label>
+        <label><input type="checkbox" id="requireOutpost" title="Guarantees at least one terrestrial body with a strong economic reason for an enclosed/self-sustaining outpost." /> Must include at least one body suitable for outpost</label>
         <label><input type="checkbox" id="allowTidallyLockedLife" checked title="Allows tidally locked planets to qualify as habitable if other conditions are favourable." /> Allow tidally locked habitable worlds</label>
       </fieldset>
 
       <fieldset>
         <legend>Projection displays</legend>
-        <label><input type="checkbox" id="showStargate" checked title="Shows the system stargate. Distance uses: max(50 × √stellar mass, outer major planet/debris edge + safety buffer)." /> Show stargate</label>
+        <label><input type="checkbox" id="showStargate" checked title="Shows the system stargate. Distance uses: max(50 × √stellar mass, outer edge of major planetary/debris region)." /> Show stargate</label>
         <label><input type="checkbox" id="showZonesOfControl" checked title="Shows each planet's sovereign volume: a 1,000,000 km radius bubble around the planet. Not to scale on wide AU projections." /> Show planetary zones of control / sovereign volumes</label>
-        <label><input type="checkbox" id="showSolOverlay" title="Overlays Sol at 1 solar radius for visual comparison against the generated system's primary star. This is radius-comparative, not true AU scale." /> Overlay Sol comparison on system projection</label>
+        <label><input type="checkbox" id="allowStations" checked title="Generates and shows orbital habitats or space stations only where there is a clear economic reason: resources, trade, colonisation support, strong biosphere research, or stargate logistics." /> Generate/show economically viable stations and habitats</label>
       </fieldset>
 
       <div class="buttons">
@@ -160,6 +175,7 @@
 
     <section class="panel output">
       <h2>Generated System</h2>
+      <div id="systemSummary" class="system-summary">Generate a system to show summary.</div>
       <div id="actions" class="actions"></div>
       <div class="visual-block">
         <h3>System projection</h3>
@@ -172,6 +188,7 @@
       <pre id="output">Set criteria, then generate a system.</pre>
     </section>
   </main>
+  <div id="customTooltip" class="custom-tooltip"></div>
 
   <script src="script.js"></script>
 </body>
